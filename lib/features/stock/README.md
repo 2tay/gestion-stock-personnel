@@ -9,7 +9,181 @@ nouvelle feature.
 
 ---
 
-## 1. Ce que fait le module
+## 1. Le modèle de données et ses relations
+
+Avant de lire du code, il faut comprendre ce qu'on modélise. Tout le module
+tourne autour d'une entité pivot, `Product`, à laquelle se rattachent quatre
+autres.
+
+```
+              ProductCategory                     MeasurementUnit
+              (Légumes, Épicerie…)                (kg, un., L…)
+                      ▲                                   ▲
+                      │ categoryId  N ─── 1               │ unit  N ─── 1
+                      │                                   │
+             ┌────────┴───────────────────────────────────┴────────┐
+             │                      Product                        │
+             │   currentStock · minStock · maxStock · unitPrice     │
+             └────────┬────────────────────────────────┬───────────┘
+                      │ 1 ─── N                        │ 1 ─── N
+                      │ (embarqué dans l'objet)        │ (stocké à part)
+                      ▼                                ▼
+               ProductSupplier                   StockMovement
+             (prix, réf., délai)          (date, type, quantité, user)
+```
+
+### Les cinq entités
+
+| Entité | Fichier | Rôle |
+|---|---|---|
+| `Product` | `domain/entities/product.dart` | Le produit géré en stock — l'entité pivot |
+| `ProductSupplier` | même fichier | Le lien entre un produit et un fournisseur, avec son prix |
+| `StockMovement` | `stock_movement.dart` | Une entrée, une sortie ou une correction |
+| `ProductCategory` | `product_category.dart` | Le regroupement (Légumes, Épicerie…) |
+| `MeasurementUnit` | `measurement_unit.dart` | L'unité de mesure (kg, unité, litre…) |
+
+### `Product` — quatre groupes de champs
+
+```dart
+// Identité
+String id;  String name;  String emoji;  String? barcode;
+
+// Classement
+String categoryId;  String categoryName;  String unit;
+
+// Niveaux — le cœur du module
+double currentStock;  double minStock;  double maxStock;  double unitPrice;
+
+// Contexte
+List<ProductSupplier> suppliers;  String? notes;  DateTime? updatedAt;
+```
+
+Ces trois niveaux et ce prix suffisent à dériver tout ce que l'interface
+affiche : `status`, `stockValue`, `quantityToOrder`, `fillRatio`. Aucun de
+ces quatre résultats n'est stocké.
+
+---
+
+### Les décisions de modélisation, et pourquoi
+
+**1. La catégorie est dénormalisée (`categoryId` + `categoryName`).**
+Le produit porte les deux. L'`id` reste la source de vérité : c'est lui qui
+sert au filtrage et aux agrégats. Le nom est une copie de confort. La vue la
+plus fréquente du module est un tableau de 15 à 200 lignes affichant la
+catégorie sur chaque ligne, et on ne veut pas chercher dans la liste des
+catégories à chaque cellule rendue. Le prix à payer est connu : renommer une
+catégorie devra propager le nouveau nom sur les produits concernés. C'est un
+travail pour la couche `data`, pas pour l'interface.
+
+**2. L'unité est un code (`String`), pas un objet imbriqué.**
+`product.unit` vaut `'kg'` — exactement ce qui s'affiche dans les tableaux et
+à côté des champs de saisie, donc le rendu ne coûte rien. `MeasurementUnit`
+existe séparément pour les formulaires, où l'on veut le libellé complet
+(« Kilogramme ») et la règle `allowsDecimals`. Les unités sont configurables
+par l'établissement : c'est une donnée, pas une `enum`.
+
+**3. `ProductSupplier` est une association, pas un fournisseur.**
+C'est la décision la plus structurante du modèle. Un fournisseur n'a pas *un*
+prix : il a un prix **pour un produit donné**. Le prix, la référence catalogue
+et le délai appartiennent donc au couple (produit, fournisseur) et non au
+fournisseur seul — d'où une entité de liaison qui porte ces attributs.
+
+La fiche fournisseur complète (adresse, contact, conditions de paiement)
+n'existe pas ici : elle appartiendra au module Achats, en phase 6.
+`ProductSupplier` ne contient que ce que l'onglet « Fournisseurs » de la fiche
+produit doit afficher, plus l'`id` qui permettra de faire le lien le moment
+venu. Modéliser dès maintenant un `Supplier` complet dans le module Stock
+aurait créé une entité que la phase 6 aurait dû défaire.
+
+**4. Le fournisseur principal est un drapeau sur le lien, pas un champ du produit.**
+`isPrimary` vit sur `ProductSupplier`, et non `Product.primarySupplierId` :
+une seule source d'information, impossible à désynchroniser. Le getter
+`primarySupplier` renvoie celui qui est marqué et retombe sur le premier de la
+liste si aucun ne l'est — l'interface n'a ainsi jamais à traiter le cas
+« des fournisseurs, mais aucun principal ».
+
+**5. Les fournisseurs sont embarqués, les mouvements sont stockés à part.**
+Deux relations 1—N traitées différemment, et c'est délibéré :
+
+| | Fournisseurs | Mouvements |
+|---|---|---|
+| Volume | 1 à 3 par produit | des centaines, qui grossissent sans fin |
+| Usage | toujours affichés avec le produit | consultés à la demande, dans un onglet |
+| Conséquence | `List<ProductSupplier>` dans `Product` | `fetchMovements(productId)` séparé |
+
+Charger la liste des produits ne doit jamais tirer l'historique complet. C'est
+la raison d'être de `productMovementsProvider`, une `family` indexée par
+identifiant de produit : seul l'historique de la fiche ouverte est chargé.
+
+**6. La quantité d'un mouvement est signée.**
+`+50` pour une entrée, `-20` pour une sortie. `MovementType` reste présent,
+mais pour l'affichage et le filtrage — pas pour le calcul. Appliquer un
+mouvement devient une addition, sans branchement :
+
+```dart
+final double updatedStock = product.currentStock + movement.quantity;
+```
+
+Et un futur rapport se réduit à une somme. La contrepartie : le signe et le
+type doivent rester cohérents. Un seul endroit en est garant —
+`registerMovement` — et c'est aussi le seul chemin autorisé pour faire varier
+le stock.
+
+**7. Le mouvement porte `user`, `date` et `reference`.**
+Ce n'est pas décoratif : le cahier des charges impose de savoir *qui* a fait
+*quoi* et *quand*. `reference` relie le mouvement à son origine
+(« CMD-005 », « Vente », « INV-2024-005 »). C'est aujourd'hui une chaîne, ce
+qui suffit à l'affichage ; quand les modules Achats et Inventaire existeront,
+elle pourra devenir un identifiant typé.
+
+**8. Le statut n'est pas un champ.**
+Ni `isLow` ni `status` stockés : `Product.status` est calculé depuis
+`currentStock` et `minStock`. Une valeur stockée serait un second endroit à
+maintenir, donc un endroit qui finit par mentir. Le badge de la liste, la
+jauge de la fiche, le compteur « stocks faibles » du tableau de bord et le
+futur écran de réapprovisionnement lisent tous cette même définition.
+
+**9. L'identité repose sur l'`id` seul.**
+`operator ==` et `hashCode` ne comparent que l'identifiant. Un produit dont le
+stock vient de changer reste donc « le même produit » : la ligne sélectionnée
+du tableau et le panneau de détail continuent de le reconnaître après un
+mouvement. Sans cela, chaque modification refermerait la fiche ouverte.
+
+**10. Les entités sont immuables, avec `copyWith`.**
+Tous les champs sont `final`. Une modification produit un nouvel objet, ce qui
+rend les comparaisons d'état fiables et empêche un widget de modifier
+silencieusement une donnée partagée.
+
+**11. Ce qui est nullable l'est pour une raison.**
+`barcode` (tous les produits ne sont pas étiquetés), `notes`, `reference`,
+`updatedAt` (un produit tout juste créé n'a pas d'historique). Le reste est
+obligatoire : un produit sans unité ni catégorie n'a pas de sens et ne doit
+pas pouvoir exister.
+
+**12. Le pictogramme est un emoji, pas une image.**
+`emoji: '🍅'`. Rien à téléverser, rien à télécharger, rien à mettre en cache :
+l'application doit rester utilisable hors connexion, et une URL d'image serait
+un point de rupture pour un gain purement décoratif.
+
+---
+
+### Ce qui n'est délibérément pas modélisé ici
+
+| Manque | Où cela ira |
+|---|---|
+| `Supplier` complet (contact, adresse, conditions) | Module Achats — phase 6 |
+| Lien typé mouvement → commande / inventaire | Phases 5 et 6, en remplaçant `reference` |
+| Lignes d'inventaire et écarts | Module Inventaire — phase 5 |
+| Historique des prix d'achat | Après la V1 |
+| Lots et dates de péremption | Hors périmètre V1 |
+
+Le principe : chaque module possède ses propres entités et n'expose aux autres
+que le minimum. Le module Stock ne doit pas devenir le dépotoir des entités de
+toute l'application.
+
+---
+
+## 2. Ce que fait le module
 
 | Écran | Contenu |
 |---|---|
@@ -20,7 +194,7 @@ nouvelle feature.
 
 ---
 
-## 2. Les trois couches
+## 3. Les trois couches
 
 ```
         ┌──────────────────────────────────────────────┐
@@ -99,7 +273,7 @@ Personne en dehors de `data/` n'importe `StockFixtures`.
 
 ---
 
-## 3. L'état, étape par étape
+## 4. L'état, étape par étape
 
 Tout est dans `presentation/controllers/stock_providers.dart`. Il y a trois
 familles de providers : **la source**, **les filtres**, **la sélection**.
@@ -182,7 +356,7 @@ la liste à jour.
 
 ---
 
-## 4. Le flux complet, écran par écran
+## 5. Le flux complet, écran par écran
 
 ### Ouvrir la page
 
@@ -249,7 +423,7 @@ MovementFormDialog
 
 ---
 
-## 5. Les règles à ne pas casser
+## 6. Les règles à ne pas casser
 
 1. **Le stock ne se modifie que par un mouvement.**
    Aucun écran n'écrit `currentStock` directement. C'est pourquoi le champ
@@ -282,7 +456,7 @@ MovementFormDialog
 
 ---
 
-## 6. Les widgets du module
+## 7. Les widgets du module
 
 | Widget | Rôle |
 |---|---|
@@ -297,7 +471,7 @@ badge, dialogue, onglets — vient de `shared/`.
 
 ---
 
-## 7. Tests
+## 8. Tests
 
 ```bash
 flutter test test/features/stock/
@@ -333,7 +507,7 @@ utiliser les clés exportées — par exemple `quantityFieldKey` dans
 
 ---
 
-## 8. Brancher le vrai backend, plus tard
+## 9. Brancher le vrai backend, plus tard
 
 Rien dans `presentation/` ne bouge. La marche à suivre :
 
