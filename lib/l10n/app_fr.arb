@@ -1,0 +1,64 @@
+{
+  "@@locale": "fr",
+
+  "appTitle": "Gestion Stock & Personnel",
+
+  "navHome": "Accueil",
+  "navStock": "Stock",
+  "navInventory": "Inventaire",
+  "navPurchasing": "Achats",
+  "navStaff": "Personnel",
+  "navReports": "Rapports",
+  "navSettings": "Paramètres",
+
+  "actionNew": "Nouveau",
+  "actionSave": "Enregistrer",
+  "actionCancel": "Annuler",
+  "actionEdit": "Modifier",
+  "actionDelete": "Supprimer",
+  "actionConfirm": "Confirmer",
+  "actionClose": "Fermer",
+  "actionRetry": "Réessayer",
+  "actionScan": "Scanner",
+  "actionSeeAll": "Voir tout",
+
+  "filterAll": "Tous",
+  "filterInProgress": "En cours",
+  "filterDraft": "Brouillon",
+  "filterDone": "Terminé",
+  "filterPartial": "Partielles",
+  "filterReceived": "Reçues",
+  "filterLowStock": "Stock faible",
+
+  "statusOk": "OK",
+  "statusLow": "Faible",
+  "statusOut": "Rupture",
+  "statusClockedIn": "Pointé",
+  "statusOnBreak": "En pause",
+  "statusAbsent": "Absent",
+
+  "searchProduct": "Rechercher un produit…",
+  "searchOrder": "Rechercher une commande…",
+  "searchEmployee": "Rechercher un employé…",
+  "searchInventory": "Rechercher un inventaire…",
+
+  "emptyNoResults": "Aucun résultat",
+  "emptyNoResultsMessage": "Essayez de modifier votre recherche ou vos filtres.",
+  "errorTitle": "Une erreur est survenue",
+  "errorMessage": "Impossible de charger les données pour le moment.",
+
+  "columnProduct": "Produit",
+  "columnCategory": "Catégorie",
+  "columnStock": "Stock",
+  "columnUnit": "Unité",
+  "columnStatus": "Statut",
+  "columnDate": "Date",
+  "columnTotal": "Total",
+  "columnSupplier": "Fournisseur",
+  "columnEmployee": "Employé",
+  "columnRole": "Poste",
+
+  "syncSynchronized": "Synchronisé",
+  "syncOffline": "Hors connexion",
+  "syncPending": "Synchronisation en cours…"
+}

@@ -1,0 +1,101 @@
+# ============================================================
+#  Gestion Stock & Personnel — .gitignore
+# ============================================================
+
+# --- Divers -------------------------------------------------
+*.class
+*.log
+*.pyc
+*.swp
+*.bak
+*.tmp
+.DS_Store
+Thumbs.db
+desktop.ini
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# --- IDE ----------------------------------------------------
+*.iml
+*.ipr
+*.iws
+.idea/
+.fleet/
+# Le dossier .vscode contient les configurations de lancement et de tâches ;
+# décommenter la ligne suivante pour les exclure du dépôt.
+#.vscode/
+
+# --- Flutter / Dart / Pub -----------------------------------
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+/coverage/
+devtools_options.yaml
+
+# `pubspec.lock` est VOLONTAIREMENT versionné : l'équipe et la CI doivent
+# construire l'application avec exactement les mêmes versions de paquets.
+
+# --- Code généré --------------------------------------------
+# Régénéré par `flutter gen-l10n` (voir l10n.yaml) — la source est app_fr.arb.
+lib/l10n/app_localizations*.dart
+# Régénéré par build_runner si des générateurs sont ajoutés plus tard.
+*.g.dart
+*.freezed.dart
+*.gr.dart
+*.mocks.dart
+
+# --- Symbolication / obfuscation ----------------------------
+app.*.symbols
+app.*.map.json
+
+# --- Android ------------------------------------------------
+/android/app/debug
+/android/app/profile
+/android/app/release
+**/android/**/gradle-wrapper.jar
+**/android/.gradle
+**/android/captures/
+**/android/gradlew
+**/android/gradlew.bat
+**/android/local.properties
+**/android/**/GeneratedPluginRegistrant.java
+**/android/key.properties
+*.jks
+*.keystore
+
+# --- Windows (utilisé pour le développement) ----------------
+**/windows/flutter/generated_plugin_registrant.cc
+**/windows/flutter/generated_plugin_registrant.h
+**/windows/flutter/generated_plugins.cmake
+
+# --- Secrets et configuration locale ------------------------
+# Ne jamais versionner d'identifiants, de clés d'API ni d'URL de production.
+.env
+.env.*
+!.env.example
+**/secrets.dart
+**/*_secrets.dart
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
+
+# --- Artefacts de sortie ------------------------------------
+*.apk
+*.aab
+*.aar
+*.ipa
+*.app
+*.exe
+*.msix
+/dist/
