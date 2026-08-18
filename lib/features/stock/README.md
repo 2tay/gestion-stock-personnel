@@ -143,11 +143,20 @@ maintenir, donc un endroit qui finit par mentir. Le badge de la liste, la
 jauge de la fiche, le compteur « stocks faibles » du tableau de bord et le
 futur écran de réapprovisionnement lisent tous cette même définition.
 
-**9. L'identité repose sur l'`id` seul.**
-`operator ==` et `hashCode` ne comparent que l'identifiant. Un produit dont le
-stock vient de changer reste donc « le même produit » : la ligne sélectionnée
-du tableau et le panneau de détail continuent de le reconnaître après un
-mouvement. Sans cela, chaque modification refermerait la fiche ouverte.
+**9. Les entités ne redéfinissent pas `==`.**
+Deux instances distinctes sont deux états distincts. Une égalité fondée sur
+l'`id` seul semblait pourtant naturelle — « c'est le même produit » — et c'est
+ce qui avait été écrit au départ. C'était un bug : Riverpod ne notifie ses
+auditeurs que si la nouvelle valeur est `!=` de l'ancienne, donc un produit
+modifié mais « égal » par son `id` laissait le panneau de détail figé sur le
+stock précédent après un mouvement.
+
+L'identité d'entité est portée par `id`, comparé explicitement là où c'est
+nécessaire (`_indexOf` dans le dépôt) et par `rowKey` dans les tableaux. La
+fiche ouverte ne se referme pas pour autant : c'est
+`selectedProductIdProvider` qui retient **l'identifiant**, et
+`selectedProductProvider` qui relit l'objet à jour dans la liste — voir §4.3.
+La règle vaut pour toutes les entités mutables du projet.
 
 **10. Les entités sont immuables, avec `copyWith`.**
 Tous les champs sont `final`. Une modification produit un nouvel objet, ce qui
@@ -449,7 +458,12 @@ MovementFormDialog
    du module devient utile ailleurs, il déménage dans `shared/` — il ne se
    duplique pas.
 
-6. **Les droits sont lus depuis la session.**
+6. **Ne jamais redéfinir `==` sur une entité mutable.**
+   Riverpod s'en sert pour décider s'il doit notifier : une égalité partielle
+   fige silencieusement l'interface. Pour identifier une entité, comparer son
+   `id` explicitement ou passer `rowKey` au tableau.
+
+7. **Les droits sont lus depuis la session.**
    `canManageCatalogProvider` masque *Nouveau produit*, *Modifier* et
    *Supprimer* pour un employé. Ne jamais tester `role == …` dans un widget :
    ajouter un getter à `SessionUser` si un nouveau droit est nécessaire.

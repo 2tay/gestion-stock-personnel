@@ -141,9 +141,13 @@ class Product {
     );
   }
 
-  @override
-  bool operator ==(Object other) => other is Product && other.id == id;
-
-  @override
-  int get hashCode => id.hashCode;
+  // Pas de redéfinition de `==` : deux instances distinctes sont deux états
+  // distincts.
+  //
+  // Une égalité fondée sur l'`id` seul paraissait tentante (« c'est le même
+  // produit »), mais elle casse la réactivité : Riverpod ne notifie ses
+  // auditeurs que si la nouvelle valeur est `!=` de l'ancienne. Un objet
+  // modifié mais « égal » par son id laissait donc les écrans afficher l'état
+  // précédent. L'identité d'entité est portée par `id`, comparé explicitement
+  // là où c'est nécessaire — et par `rowKey` dans les tableaux.
 }

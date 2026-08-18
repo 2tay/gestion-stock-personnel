@@ -234,17 +234,24 @@ class ConfirmDialog extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: <Widget>[
-                  AppButton.secondary(
-                    label: cancelLabel,
-                    onPressed: () => Navigator.of(context).pop(false),
+                  // Flexible : un libellé de confirmation explicite
+                  // (« Valider l'inventaire ») dépasse la largeur du
+                  // dialogue s'il n'a pas le droit de se compresser.
+                  Flexible(
+                    child: AppButton.secondary(
+                      label: cancelLabel,
+                      onPressed: () => Navigator.of(context).pop(false),
+                    ),
                   ),
                   const SizedBox(width: AppSpacing.md),
-                  AppButton(
-                    label: confirmLabel,
-                    variant: destructive
-                        ? AppButtonVariant.danger
-                        : AppButtonVariant.primary,
-                    onPressed: () => Navigator.of(context).pop(true),
+                  Flexible(
+                    child: AppButton(
+                      label: confirmLabel,
+                      variant: destructive
+                          ? AppButtonVariant.danger
+                          : AppButtonVariant.primary,
+                      onPressed: () => Navigator.of(context).pop(true),
+                    ),
                   ),
                 ],
               ),

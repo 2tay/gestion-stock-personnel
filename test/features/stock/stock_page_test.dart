@@ -127,8 +127,11 @@ void main() {
     await tester.tap(find.text('Enregistrer le mouvement'));
     await tester.pumpAndSettle();
 
-    // 55 + 60 = 115, au-dessus du seuil de 60.
-    expect(find.text('115 kg'), findsWidgets);
+    // 55 + 60 = 115, au-dessus du seuil de 60. La nouvelle valeur doit
+    // apparaître dans la ligne du tableau ET dans la fiche ouverte : une
+    // égalité d'entité fondée sur le seul `id` empêchait Riverpod de
+    // notifier le panneau de détail, qui restait figé sur l'ancien stock.
+    expect(find.text('115 kg'), findsNWidgets(2));
   });
 
   testWidgets('la recherche filtre le tableau', (WidgetTester tester) async {

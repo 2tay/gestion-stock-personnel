@@ -22,6 +22,7 @@ class GalleryPage extends ConsumerStatefulWidget {
 class _GalleryPageState extends ConsumerState<GalleryPage> {
   String _filter = 'tous';
   String _detailTab = 'mouvements';
+  double? _counted = 95;
   ReportPeriod _period = ReportPeriod.last7Days;
   final TextEditingController _text = TextEditingController();
   String? _unit = 'kg';
@@ -267,6 +268,46 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
             ),
           ),
           _section(
+            'Saisie en cellule et progression',
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                InlineNumberField(
+                  value: _counted,
+                  suffix: 'kg',
+                  onSubmitted: (double? v) => setState(() => _counted = v),
+                ),
+                const SizedBox(width: AppSpacing.lg),
+                const InlineNumberField(
+                  value: null,
+                  suffix: 'un.',
+                  onSubmitted: _ignore,
+                ),
+                const SizedBox(width: AppSpacing.lg),
+                const InlineNumberField(
+                  value: 12,
+                  suffix: 'L',
+                  enabled: false,
+                  onSubmitted: _ignore,
+                ),
+                const SizedBox(width: AppSpacing.xxl),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text('Avancement du comptage', style: AppTypography.label),
+                      SizedBox(height: AppSpacing.sm),
+                      AppProgressBar(value: 0.62),
+                      SizedBox(height: AppSpacing.md),
+                      AppProgressBar(value: 1, color: AppColors.success),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _section(
             'Tableau générique',
             AppDataTable<_DemoRow>(
               rows: _demoRows,
@@ -386,6 +427,9 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     );
   }
 }
+
+/// Callback neutre pour les exemples non interactifs de la vitrine.
+void _ignore(double? _) {}
 
 class _Swatch extends StatelessWidget {
   const _Swatch(this.name, this.color);

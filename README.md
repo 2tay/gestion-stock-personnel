@@ -3,11 +3,12 @@
 Application tablette Android pour la gestion du stock, des inventaires, des
 achats et du personnel d'un établissement.
 
-**État actuel : phases 0 à 4 terminées.** Le socle est en place (design
-system, navigation, composants partagés) et le module **Stock** est
-fonctionnel sur données de démonstration. Les autres modules sont encore des
-pages d'attente. Aucun backend à ce stade : la couche `data` renvoie des
-fixtures en mémoire.
+**État actuel : phases 0 à 5 terminées.** Le socle est en place (design
+system, navigation, composants partagés) et les modules **Stock** et
+**Inventaire** sont fonctionnels sur données de démonstration — y compris la
+validation d'un inventaire, qui écrit de vrais ajustements dans le stock. Les
+autres modules sont encore des pages d'attente. Aucun backend à ce stade : la
+couche `data` renvoie des fixtures en mémoire.
 
 ---
 
@@ -76,7 +77,7 @@ lib/
     ├── auth/         domain/ + presentation/ (session simulée, login)
     ├── dashboard/    presentation/
     ├── stock/        ✅ complet — voir ci-dessous
-    ├── inventory/    presentation/
+    ├── inventory/    ✅ complet — voir son README
     ├── purchasing/   presentation/
     ├── staff/        presentation/
     ├── reports/      presentation/
@@ -103,9 +104,13 @@ features/stock/
 ```
 
 Les autres modules doivent suivre exactement ce découpage.
-Le fonctionnement détaillé du module — couches, providers, flux de données et
-règles à ne pas casser — est documenté dans
-[`lib/features/stock/README.md`](lib/features/stock/README.md).
+Le fonctionnement détaillé de chaque module — couches, providers, flux de
+données et règles à ne pas casser — est documenté dans son propre README :
+
+- [`lib/features/stock/README.md`](lib/features/stock/README.md)
+- [`lib/features/inventory/README.md`](lib/features/inventory/README.md) —
+  ajoute le patron `domain/usecases/` pour les règles qui traversent deux
+  modules
 
 Chaque feature suit `domain/` (entités + interfaces de repository),
 `data/` (modèles + source de données) et `presentation/`
@@ -153,7 +158,7 @@ L'écran de connexion permet de basculer de rôle pour vérifier l'interface.
 | Phase | Contenu |
 |---|---|
 | ~~4~~ | ~~Module Stock~~ — terminé |
-| 5 | Module Inventaire : liste, comptage, écarts |
+| ~~5~~ | ~~Module Inventaire~~ — terminé |
 | 6 | Achats : commandes, réception, fournisseurs |
 | 7 | Personnel : employés, pointage, heures supplémentaires |
 | 8 | Tableau de bord |
