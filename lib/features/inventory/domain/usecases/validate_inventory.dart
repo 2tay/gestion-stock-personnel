@@ -9,15 +9,22 @@ import '../repositories/inventory_repository.dart';
 class InventoryValidationResult {
   const InventoryValidationResult({
     required this.inventory,
-    required this.adjustmentsApplied,
+    required this.adjustedProductIds,
     required this.linesSkipped,
     required this.totalVarianceValue,
   });
 
   final Inventory inventory;
 
+  /// Produits dont le stock a été corrigé, dans l'ordre des ajustements.
+  ///
+  /// L'appelant en a besoin pour rafraîchir ce qui dépend de ces produits :
+  /// leur stock, mais aussi leur historique de mouvements, qui vient de
+  /// gagner une ligne.
+  final List<String> adjustedProductIds;
+
   /// Nombre de mouvements d'ajustement écrits dans le stock.
-  final int adjustmentsApplied;
+  int get adjustmentsApplied => adjustedProductIds.length;
 
   /// Lignes non comptées, laissées telles quelles.
   final int linesSkipped;
@@ -61,7 +68,7 @@ class ValidateInventory {
     }
 
     final DateTime now = DateTime.now();
-    int adjustments = 0;
+    final List<String> adjustedProductIds = <String>[];
 
     for (final InventoryLine line in inventory.lines) {
       if (!line.hasVariance) continue;
@@ -79,7 +86,7 @@ class ValidateInventory {
           note: 'Écart constaté lors de l’inventaire',
         ),
       );
-      adjustments++;
+      adjustedProductIds.add(line.productId);
     }
 
     final Inventory validated = await _inventories.markValidated(
@@ -90,7 +97,7 @@ class ValidateInventory {
 
     return InventoryValidationResult(
       inventory: validated,
-      adjustmentsApplied: adjustments,
+      adjustedProductIds: adjustedProductIds,
       linesSkipped: inventory.remainingCount,
       totalVarianceValue: inventory.totalVarianceValue,
     );

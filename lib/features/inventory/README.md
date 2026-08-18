@@ -224,9 +224,19 @@ Deux détails qui comptent :
   inutilisable sur un inventaire de 200 lignes. Le dépôt en mémoire
   n'applique d'ailleurs aucune latence sur cette méthode : la saisie doit
   rester instantanée, y compris hors connexion.
-- **`validate` recharge le module Stock.** Le stock vient de changer :
-  `stockControllerProvider.load()` est appelé pour que la liste des produits
-  reflète les ajustements.
+- **`validate` prévient le module Stock, il ne le recharge pas lui-même.**
+  `InventoryValidationResult` porte `adjustedProductIds`, et le contrôleur
+  appelle `stockController.refreshProducts(ids)`.
+
+  Recharger la liste des produits ne suffit pas : l'historique des mouvements
+  est mis en cache **par produit** (`productMovementsProvider`, une `family`
+  sans `autoDispose`). Un simple `load()` corrigeait bien la quantité affichée
+  mais laissait la fiche produit montrer un historique d'où l'ajustement était
+  absent — c'était un vrai bug, corrigé après un test manuel.
+
+  Le module Stock reste propriétaire de ses caches : Inventaire annonce
+  seulement les produits qu'il a touchés. Achats fera exactement pareil en
+  phase 6.
 
 ### Filtres
 
@@ -302,7 +312,13 @@ défilement automatique, et le champ devient immédiatement atteignable.
 4. **Un inventaire validé est immuable** : ni comptage, ni suppression.
 5. **La logique inter-modules vit dans `usecases/`**, pas dans un dépôt ni
    dans un contrôleur.
-6. **Ne jamais redéfinir `==` sur `Inventory` ou `InventoryLine`.**
+6. **Après avoir écrit dans un autre module, le prévenir explicitement.**
+   Un cas d'usage qui modifie le stock doit renvoyer les identifiants
+   concernés, et l'appelant doit passer par la méthode de rafraîchissement du
+   module propriétaire (`StockController.refreshProducts`). Écrire dans un
+   dépôt sans invalider les caches de l'autre module laisse l'interface
+   mentir.
+7. **Ne jamais redéfinir `==` sur `Inventory` ou `InventoryLine`.**
 
 ---
 
@@ -334,6 +350,12 @@ flutter test test/features/inventory/
 - `inventory_page_test.dart` — les écrans : liste, filtres, ouverture du
   comptage, saisie d'une quantité, effacement d'une saisie, clôture,
   validation, création d'un inventaire par catégorie.
+- `inventory_stock_sync_test.dart` — la cohérence avec le module Stock. Ces
+  tests naviguent entre les deux modules **dans un même `ProviderScope`**,
+  parce que c'est la seule façon d'attraper un cache resté périmé. Un test qui
+  ne monte qu'un module voit l'écriture dans le dépôt et conclut à tort que
+  tout va bien : c'est précisément ce qui avait laissé passer le bug
+  d'invalidation.
 
 Comme pour le module Stock, un test de widget doit initialiser la locale et
 surcharger **les deux** dépôts :

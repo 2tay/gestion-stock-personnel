@@ -311,6 +311,19 @@ Future<void> registerMovement(StockMovement m);   // entrée / sortie / correcti
 `registerMovement` fait en plus `ref.invalidate(productMovementsProvider(id))`
 pour que l'onglet Mouvements de la fiche se recharge lui aussi.
 
+Et pour les écritures venues d'ailleurs :
+
+```dart
+Future<void> refreshProducts(Iterable<String> productIds);
+```
+
+À appeler quand un **autre module** a modifié le stock sans passer par ce
+contrôleur — la validation d'un inventaire aujourd'hui, la réception d'une
+commande demain. Elle invalide l'historique des produits nommés puis recharge
+la liste. Ce contrôleur est propriétaire des caches du module Stock : les
+autres modules annoncent seulement ce qu'ils ont touché, ils n'invalident
+jamais eux-mêmes.
+
 Trois providers annexes complètent la source :
 
 ```dart

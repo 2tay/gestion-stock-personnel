@@ -56,6 +56,22 @@ class StockController extends StateNotifier<AsyncValue<List<Product>>> {
     await load();
   }
 
+  /// À appeler quand un **autre module** a modifié le stock de produits
+  /// sans passer par ce contrôleur — validation d'un inventaire aujourd'hui,
+  /// réception d'une commande demain.
+  ///
+  /// Recharger la liste des produits ne suffit pas : l'historique des
+  /// mouvements est mis en cache par produit et resterait figé sur son
+  /// contenu précédent. C'est ce contrôleur, propriétaire des caches du
+  /// module Stock, qui sait ce qu'il faut invalider — les autres modules
+  /// annoncent seulement les produits qu'ils ont touchés.
+  Future<void> refreshProducts(Iterable<String> productIds) async {
+    for (final String productId in productIds) {
+      _ref.invalidate(productMovementsProvider(productId));
+    }
+    await load();
+  }
+
   /// Identifiant à attribuer à un produit créé depuis l'interface.
   String nextProductId() {
     final ProductRepository repository = _repository;

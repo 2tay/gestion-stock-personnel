@@ -116,8 +116,12 @@ class InventoryController extends StateNotifier<AsyncValue<List<Inventory>>> {
       validatedBy: validatedBy,
     );
     _replace(result.inventory);
-    // Le stock a changé : la liste des produits doit se recharger.
-    await _ref.read(stockControllerProvider.notifier).load();
+    // Le stock des produits corrigés a changé, et leur historique de
+    // mouvements vient de gagner une ligne : c'est au module Stock de
+    // rafraîchir ce qu'il faut, on lui dit seulement quels produits.
+    await _ref
+        .read(stockControllerProvider.notifier)
+        .refreshProducts(result.adjustedProductIds);
     return result;
   }
 
