@@ -52,6 +52,7 @@ class StatusBadge extends StatelessWidget {
           OrderStatus.enCours => 'En cours',
           OrderStatus.partielle => 'Partielle',
           OrderStatus.recue => 'Reçue',
+          OrderStatus.soldee => 'Soldée',
           OrderStatus.annulee => 'Annulée',
         },
         tone = switch (status) {
@@ -59,6 +60,7 @@ class StatusBadge extends StatelessWidget {
           OrderStatus.enCours => SemanticTone.info,
           OrderStatus.partielle => SemanticTone.warning,
           OrderStatus.recue => SemanticTone.success,
+          OrderStatus.soldee => SemanticTone.neutral,
           OrderStatus.annulee => SemanticTone.danger,
         };
 

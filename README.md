@@ -3,12 +3,14 @@
 Application tablette Android pour la gestion du stock, des inventaires, des
 achats et du personnel d'un établissement.
 
-**État actuel : phases 0 à 5 terminées.** Le socle est en place (design
-system, navigation, composants partagés) et les modules **Stock** et
-**Inventaire** sont fonctionnels sur données de démonstration — y compris la
-validation d'un inventaire, qui écrit de vrais ajustements dans le stock. Les
-autres modules sont encore des pages d'attente. Aucun backend à ce stade : la
-couche `data` renvoie des fixtures en mémoire.
+**État actuel : phases 0 à 6 terminées.** Le socle est en place (design
+system, navigation, composants partagés) et les modules **Stock**,
+**Inventaire** et **Achats** sont fonctionnels sur données de démonstration —
+y compris les deux opérations qui traversent les modules : valider un
+inventaire écrit des ajustements dans le stock, recevoir une commande y écrit
+des entrées. Tableau de bord, Rapports et Personnel sont encore des pages
+d'attente. Aucun backend à ce stade : la couche `data` renvoie des fixtures en
+mémoire.
 
 ---
 
@@ -78,7 +80,7 @@ lib/
     ├── dashboard/    presentation/
     ├── stock/        ✅ complet — voir ci-dessous
     ├── inventory/    ✅ complet — voir son README
-    ├── purchasing/   presentation/
+    ├── purchasing/   ✅ complet — voir son README
     ├── staff/        presentation/
     ├── reports/      presentation/
     ├── settings/     presentation/
@@ -111,6 +113,9 @@ données et règles à ne pas casser — est documenté dans son propre README :
 - [`lib/features/inventory/README.md`](lib/features/inventory/README.md) —
   ajoute le patron `domain/usecases/` pour les règles qui traversent deux
   modules
+- [`lib/features/purchasing/README.md`](lib/features/purchasing/README.md) —
+  deuxième utilisateur de ce patron : fournisseurs, commandes, réception et
+  liste de courses
 
 Chaque feature suit `domain/` (entités + interfaces de repository),
 `data/` (modèles + source de données) et `presentation/`
@@ -155,11 +160,15 @@ L'écran de connexion permet de basculer de rôle pour vérifier l'interface.
 
 ## Suite du plan
 
+Le détail de ce qui reste, les décisions en attente et les règles acquises en
+cours de route sont dans [`ROADMAP.md`](ROADMAP.md) — à lire en premier pour
+reprendre le projet.
+
 | Phase | Contenu |
 |---|---|
 | ~~4~~ | ~~Module Stock~~ — terminé |
 | ~~5~~ | ~~Module Inventaire~~ — terminé |
-| 6 | Achats : commandes, réception, fournisseurs |
+| ~~6~~ | ~~Achats : fournisseurs, commandes, réception, liste de courses~~ — terminé |
 | 7 | Personnel : employés, pointage, heures supplémentaires |
 | 8 | Tableau de bord |
 | 9 | Rapports & graphiques |
