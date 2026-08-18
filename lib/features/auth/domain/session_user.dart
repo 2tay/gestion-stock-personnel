@@ -33,6 +33,14 @@ class SessionUser {
           'Accès aux fonctionnalités autorisées (pointage, consultation…)',
       };
 
+  /// Droits d'écriture sur le catalogue produits, les commandes et les
+  /// fournisseurs. L'employé consulte et enregistre des mouvements, mais ne
+  /// crée ni ne supprime de produit.
+  bool get canManageCatalog => role != UserRole.employe;
+
+  /// Accès aux paramètres de l'application.
+  bool get canManageSettings => role == UserRole.patron;
+
   SessionUser copyWith({String? fullName, UserRole? role, String? jobTitle}) {
     return SessionUser(
       id: id,

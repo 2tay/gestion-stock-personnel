@@ -21,6 +21,7 @@ class GalleryPage extends ConsumerStatefulWidget {
 
 class _GalleryPageState extends ConsumerState<GalleryPage> {
   String _filter = 'tous';
+  String _detailTab = 'mouvements';
   ReportPeriod _period = ReportPeriod.last7Days;
   final TextEditingController _text = TextEditingController();
   String? _unit = 'kg';
@@ -183,6 +184,18 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                   value: 'faible',
                   count: 12,
                 ),
+              ],
+            ),
+          ),
+          _section(
+            'Onglets de détail',
+            UnderlineTabs<String>(
+              selected: _detailTab,
+              onSelected: (String v) => setState(() => _detailTab = v),
+              tabs: const <(String, String)>[
+                ('mouvements', 'Mouvements'),
+                ('informations', 'Informations'),
+                ('fournisseurs', 'Fournisseurs'),
               ],
             ),
           ),

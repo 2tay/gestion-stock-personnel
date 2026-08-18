@@ -121,15 +121,21 @@ class FormDialog extends StatelessWidget {
         children: <Widget>[
           ...extraActions,
           const Spacer(),
-          AppButton.secondary(
-            label: cancelLabel,
-            onPressed: onCancel ?? () => Navigator.of(context).pop(),
+          // Flexible : sur un dialogue étroit, un libellé de confirmation
+          // long doit se tronquer plutôt que faire déborder la barre.
+          Flexible(
+            child: AppButton.secondary(
+              label: cancelLabel,
+              onPressed: onCancel ?? () => Navigator.of(context).pop(),
+            ),
           ),
           const SizedBox(width: AppSpacing.md),
-          AppButton.primary(
-            label: confirmLabel,
-            isLoading: isSubmitting,
-            onPressed: onConfirm,
+          Flexible(
+            child: AppButton.primary(
+              label: confirmLabel,
+              isLoading: isSubmitting,
+              onPressed: onConfirm,
+            ),
           ),
         ],
       ),

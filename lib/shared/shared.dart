@@ -21,6 +21,7 @@ export 'widgets/molecules/search_field.dart';
 export 'widgets/molecules/section_header.dart';
 export 'widgets/molecules/state_views.dart';
 export 'widgets/molecules/status_badge.dart';
+export 'widgets/molecules/underline_tabs.dart';
 export 'widgets/organisms/app_data_table.dart';
 export 'widgets/organisms/app_dialogs.dart';
 export 'widgets/organisms/app_nav_rail.dart';

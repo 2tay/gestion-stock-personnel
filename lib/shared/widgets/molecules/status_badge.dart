@@ -127,11 +127,18 @@ class StatusBadge extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.sm - 2),
           ],
-          Text(
-            label,
-            style: AppTypography.badge.copyWith(
-              color: c.foreground,
-              fontSize: dense ? 11 : 12,
+          // Flexible : dans une colonne de tableau à largeur fixe, le badge
+          // doit se tronquer proprement plutôt que déborder.
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.badge.copyWith(
+                color: c.foreground,
+                fontSize: dense ? 11 : 12,
+              ),
             ),
           ),
         ],

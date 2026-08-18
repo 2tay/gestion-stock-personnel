@@ -49,12 +49,23 @@ class LabeledValue extends StatelessWidget {
               Icon(icon, size: 14, color: AppColors.textTertiary),
               const SizedBox(width: AppSpacing.xs + 2),
             ],
-            Text(label, style: AppTypography.caption),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.caption,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: AppSpacing.xs + 2),
         Text(
           value,
+          maxLines: 1,
+          softWrap: false,
+          overflow: TextOverflow.ellipsis,
           style: (valueStyle ?? AppTypography.titleSm).copyWith(
             color: valueColor,
           ),

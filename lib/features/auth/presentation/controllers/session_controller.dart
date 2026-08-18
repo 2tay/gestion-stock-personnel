@@ -49,3 +49,8 @@ final Provider<UserRole> currentRoleProvider = Provider<UserRole>((Ref ref) {
 final Provider<String> currentUserNameProvider = Provider<String>((Ref ref) {
   return ref.watch(sessionProvider)?.fullName ?? 'Invité';
 });
+
+/// Droits d'écriture sur le catalogue (produits, fournisseurs, commandes).
+final Provider<bool> canManageCatalogProvider = Provider<bool>((Ref ref) {
+  return ref.watch(sessionProvider)?.canManageCatalog ?? false;
+});
