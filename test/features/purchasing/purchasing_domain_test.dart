@@ -3,6 +3,7 @@ import 'package:gestion_stock/core/constants/app_enums.dart';
 import 'package:gestion_stock/features/purchasing/data/repositories/in_memory_purchasing_repositories.dart';
 import 'package:gestion_stock/features/purchasing/domain/entities/purchase_order.dart';
 import 'package:gestion_stock/features/purchasing/domain/repositories/purchasing_repositories.dart';
+import 'package:gestion_stock/features/purchasing/domain/usecases/apply_supplier_prices.dart';
 import 'package:gestion_stock/features/purchasing/domain/usecases/receive_order.dart';
 import 'package:gestion_stock/features/stock/data/repositories/in_memory_product_repository.dart';
 import 'package:gestion_stock/features/stock/domain/entities/product.dart';
@@ -255,10 +256,11 @@ void main() {
       expect(movement.note, 'Correction de réception');
     });
 
-    test('le prix d’achat du produit suit celui de la commande', () async {
+    test('le dernier prix payé est consigné sur le produit', () async {
       final PurchaseOrder cmd = await order('CMD-005');
-      // Carotte est à 4,8 dans le stock, la commande la paie 3,00.
-      expect((await products.fetchProduct('p-004'))!.unitPrice, 4.8);
+      // Carotte a été payée 4,80 à la dernière livraison ; la commande en
+      // cours la paie 3,00.
+      expect((await products.fetchProduct('p-004'))!.lastPurchasePrice, 4.8);
 
       final OrderReceptionResult result = await receiveOrder(
         cmd,
@@ -266,8 +268,97 @@ void main() {
         receivedBy: 'Admin Demo',
       );
 
-      expect(result.repricedProductIds, <String>['p-004']);
-      expect((await products.fetchProduct('p-004'))!.unitPrice, 3);
+      final Product carotte = (await products.fetchProduct('p-004'))!;
+      expect(result.receivedProductIds, <String>['p-004']);
+      expect(carotte.lastPurchasePrice, 3);
+      expect(carotte.lastSupplierId, 'sup-1');
+      expect(carotte.lastPurchaseDate, isNotNull);
+    });
+
+    test('le coût moyen est recalculé, pas écrasé', () async {
+      final PurchaseOrder cmd = await order('CMD-005');
+      final Product avant = (await products.fetchProduct('p-004'))!;
+      // Carotte : 55 kg au coût moyen de 4,80 ; la commande en livre 20 à 3.
+      expect(avant.currentStock, 55);
+      expect(avant.averageCost, 4.8);
+
+      await receiveOrder(
+        cmd,
+        receivedQuantities: <String, double>{'p-004': 50},
+        receivedBy: 'Admin Demo',
+      );
+
+      final Product apres = (await products.fetchProduct('p-004'))!;
+      const double attendu = (55 * 4.8 + 20 * 3) / 75;
+      expect(apres.currentStock, 75);
+      expect(apres.averageCost, closeTo(attendu, 0.000001));
+      // Surtout pas 3,00 : le stock détenu avant la livraison a bien coûté
+      // 4,80, et il est toujours là.
+      expect(apres.averageCost, greaterThan(3));
+      expect(apres.averageCost, lessThan(4.8));
+      // La valeur du stock est exactement ce qui a été dépensé.
+      expect(apres.stockValue, closeTo(55 * 4.8 + 20 * 3, 0.000001));
+    });
+
+    test('corriger une réception restitue le coût moyen d’avant', () async {
+      final PurchaseOrder cmd = await order('CMD-005');
+      final double coutAvant =
+          (await products.fetchProduct('p-004'))!.averageCost;
+
+      // On saisit 50, puis on se ravise et on revient à 30, le cumul initial.
+      await receiveOrder(
+        cmd,
+        receivedQuantities: <String, double>{'p-004': 50},
+        receivedBy: 'Admin Demo',
+      );
+      final PurchaseOrder apresPremiere = await order('CMD-005');
+      await receiveOrder(
+        apresPremiere,
+        receivedQuantities: <String, double>{'p-004': 30},
+        receivedBy: 'Admin Demo',
+      );
+
+      final Product apres = (await products.fetchProduct('p-004'))!;
+      expect(apres.currentStock, 55);
+      expect(apres.averageCost, closeTo(coutAvant, 0.000001));
+      // La correction n'est pas un achat : le dernier prix payé reste celui
+      // de la livraison, qui a bien eu lieu.
+      expect(apres.lastPurchasePrice, 3);
+    });
+
+    test('le mouvement porte le prix payé et le fournisseur', () async {
+      final PurchaseOrder cmd = await order('CMD-005');
+
+      // Carotte : 30 déjà reçus sur 50, payés 3,00 par AgriPlus.
+      await receiveOrder(
+        cmd,
+        receivedQuantities: <String, double>{'p-004': 50},
+        receivedBy: 'Admin Demo',
+      );
+
+      final StockMovement movement =
+          (await products.fetchMovements('p-004')).first;
+      expect(movement.quantity, 20);
+      expect(movement.unitCost, 3);
+      expect(movement.supplierId, 'sup-1');
+      // Le coût de cette entrée, indépendant de tout tarif futur.
+      expect(movement.totalCost, 60);
+    });
+
+    test('une correction reprend le prix de la commande', () async {
+      final PurchaseOrder cmd = await order('CMD-005');
+
+      // Tomate passe de 40 à 35 reçus : on annule 5 unités payées 6,00.
+      await receiveOrder(
+        cmd,
+        receivedQuantities: <String, double>{'p-001': 35},
+        receivedBy: 'Admin Demo',
+      );
+
+      final StockMovement movement =
+          (await products.fetchMovements('p-001')).first;
+      expect(movement.unitCost, 6);
+      expect(movement.totalCost, -30);
     });
 
     test('une quantité inchangée n’écrit rien', () async {
@@ -314,6 +405,135 @@ void main() {
       expect(result.order.isFullyReceived, isTrue);
       expect(result.order.status, OrderStatus.recue);
       expect(result.order.receivedTotal, result.order.orderedTotal);
+    });
+  });
+
+  group('Tarifs fournisseurs constatés à la réception', () {
+    late InMemoryProductRepository products;
+    late PurchaseOrderRepository orders;
+    late ReceiveOrder receiveOrder;
+    late ApplySupplierPrices applySupplierPrices;
+
+    setUp(() {
+      products = InMemoryProductRepository(latency: Duration.zero);
+      orders = InMemoryPurchaseOrderRepository(latency: Duration.zero);
+      receiveOrder = ReceiveOrder(orders: orders, products: products);
+      applySupplierPrices = ApplySupplierPrices(products: products);
+    });
+
+    Future<PurchaseOrder> order(String reference) async {
+      final List<PurchaseOrder> all = await orders.fetchOrders();
+      return all.firstWhere((PurchaseOrder o) => o.reference == reference);
+    }
+
+    test('un prix différent du tarif est constaté, pas appliqué', () async {
+      final PurchaseOrder cmd = await order('CMD-005');
+      // Carotte : tarif AgriPlus à 4,80, la commande la paie 3,00.
+      final ProductSupplier avant =
+          (await products.fetchProduct('p-004'))!.supplierById('sup-1')!;
+      expect(avant.unitPrice, 4.8);
+
+      final OrderReceptionResult result = await receiveOrder(
+        cmd,
+        receivedQuantities: <String, double>{'p-004': 50},
+        receivedBy: 'Admin Demo',
+      );
+
+      expect(result.hasPriceDiscrepancies, isTrue);
+      final SupplierPriceDiscrepancy ecart = result.priceDiscrepancies
+          .firstWhere((SupplierPriceDiscrepancy d) => d.productId == 'p-004');
+      expect(ecart.knownPrice, 4.8);
+      expect(ecart.paidPrice, 3);
+      expect(ecart.isIncrease, isFalse);
+      expect(ecart.supplierId, 'sup-1');
+
+      // Constaté seulement : le catalogue n'a pas bougé.
+      final ProductSupplier apres =
+          (await products.fetchProduct('p-004'))!.supplierById('sup-1')!;
+      expect(apres.unitPrice, 4.8);
+      expect(apres.prices.length, avant.prices.length);
+    });
+
+    test('une fois le tarif accepté, l’écart ne se répète plus', () async {
+      // Carotte : tarif 4,80, commande à 3,00. On reçoit une partie, on
+      // accepte le nouveau tarif, puis on reçoit le reste.
+      final OrderReceptionResult premiere = await receiveOrder(
+        await order('CMD-005'),
+        receivedQuantities: <String, double>{'p-004': 40},
+        receivedBy: 'Admin Demo',
+      );
+      expect(premiere.hasPriceDiscrepancies, isTrue);
+
+      await applySupplierPrices(premiere.priceDiscrepancies);
+
+      final OrderReceptionResult seconde = await receiveOrder(
+        await order('CMD-005'),
+        receivedQuantities: <String, double>{'p-004': 50},
+        receivedBy: 'Admin Demo',
+      );
+
+      // Le tarif enregistré vaut désormais le prix payé : plus rien à
+      // signaler, et donc plus de question inutile à l'utilisateur.
+      expect(
+        seconde.priceDiscrepancies
+            .where((SupplierPriceDiscrepancy d) => d.productId == 'p-004'),
+        isEmpty,
+      );
+    });
+
+    test('appliquer un écart ajoute un tarif sans effacer', () async {
+      final PurchaseOrder cmd = await order('CMD-005');
+      final ProductSupplier avant =
+          (await products.fetchProduct('p-004'))!.supplierById('sup-1')!;
+
+      final OrderReceptionResult result = await receiveOrder(
+        cmd,
+        receivedQuantities: <String, double>{'p-004': 50},
+        receivedBy: 'Admin Demo',
+      );
+      final List<String> updated =
+          await applySupplierPrices(result.priceDiscrepancies);
+
+      expect(updated, contains('p-004'));
+      final ProductSupplier apres =
+          (await products.fetchProduct('p-004'))!.supplierById('sup-1')!;
+      expect(apres.unitPrice, 3);
+      expect(apres.previousPrice?.unitPrice, avant.unitPrice);
+      expect(apres.prices.length, avant.prices.length + 1);
+      // On saura plus tard que ce tarif a été constaté, pas négocié.
+      expect(apres.currentPrice.source, PriceSource.reception);
+    });
+
+    test('n’appliquer aucun écart ne change rien', () async {
+      final PurchaseOrder cmd = await order('CMD-005');
+      final ProductSupplier avant =
+          (await products.fetchProduct('p-004'))!.supplierById('sup-1')!;
+
+      await receiveOrder(
+        cmd,
+        receivedQuantities: <String, double>{'p-004': 50},
+        receivedBy: 'Admin Demo',
+      );
+      // L'utilisateur refuse : c'était une promotion ponctuelle.
+      await applySupplierPrices(const <SupplierPriceDiscrepancy>[]);
+
+      final ProductSupplier apres =
+          (await products.fetchProduct('p-004'))!.supplierById('sup-1')!;
+      expect(apres.unitPrice, avant.unitPrice);
+      expect(apres.prices.length, avant.prices.length);
+    });
+
+    test('une correction à la baisse ne constate aucun tarif', () async {
+      final PurchaseOrder cmd = await order('CMD-005');
+
+      // Tomate passe de 40 à 35 reçus : ce n'est pas une livraison.
+      final OrderReceptionResult result = await receiveOrder(
+        cmd,
+        receivedQuantities: <String, double>{'p-001': 35},
+        receivedBy: 'Admin Demo',
+      );
+
+      expect(result.hasPriceDiscrepancies, isFalse);
     });
   });
 

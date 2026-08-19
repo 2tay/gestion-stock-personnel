@@ -237,6 +237,19 @@ void main() {
       return (inventory, target);
     }
 
+    test('l’ajustement porte le prix figé de la ligne', () async {
+      final (Inventory inventory, InventoryLine line) =
+          await prepare(counted: 80);
+
+      await validateInventory(inventory, validatedBy: 'Admin Demo');
+
+      final StockMovement movement =
+          (await products.fetchMovements(line.productId)).first;
+      // Le prix vient de l'inventaire, figé à son ouverture : un écart de
+      // comptage n'est pas un achat et ne fixe aucun prix nouveau.
+      expect(movement.unitCost, line.unitPrice);
+    });
+
     test('un écart génère un ajustement et corrige le stock', () async {
       final (Inventory inventory, InventoryLine line) =
           await prepare(counted: 80);

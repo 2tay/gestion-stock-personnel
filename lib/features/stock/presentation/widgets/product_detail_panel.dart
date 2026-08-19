@@ -330,8 +330,19 @@ class _InformationsTab extends StatelessWidget {
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: LabeledValue.boxed(
-                  label: 'Prix d’achat',
-                  value: Formatters.money(product.unitPrice),
+                  label: 'Coût unitaire moyen',
+                  value: Formatters.money(product.averageCost),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: LabeledValue.boxed(
+                  label: 'Dernier prix payé',
+                  // « — » et non « 0,00 » : un produit jamais acheté n'a pas
+                  // un prix nul, il n'a pas de prix.
+                  value: product.lastPurchasePrice == null
+                      ? '—'
+                      : Formatters.money(product.lastPurchasePrice!),
                 ),
               ),
             ],
@@ -448,6 +459,13 @@ class _SuppliersTab extends StatelessWidget {
           value: (ProductSupplier s) => Formatters.money(s.unitPrice),
           sortValue: (ProductSupplier s) => s.unitPrice,
         ),
+        AppColumn<ProductSupplier>(
+          label: 'Évolution',
+          width: 120,
+          alignment: Alignment.centerRight,
+          sortValue: (ProductSupplier s) => s.priceChangeRatio ?? 0,
+          cell: (ProductSupplier s) => _PriceTrend(supplier: s),
+        ),
         AppColumn<ProductSupplier>.text(
           label: 'Délai',
           width: 90,
@@ -455,6 +473,58 @@ class _SuppliersTab extends StatelessWidget {
           value: (ProductSupplier s) => '${s.deliveryDays} j',
         ),
       ],
+    );
+  }
+}
+
+/// Écart entre le tarif en vigueur d'un fournisseur et le précédent.
+///
+/// Affiche « — » quand il n'y a pas d'historique : montrer « 0 % » ferait
+/// croire à une stabilité qui n'a jamais été observée.
+class _PriceTrend extends StatelessWidget {
+  const _PriceTrend({required this.supplier});
+
+  final ProductSupplier supplier;
+
+  @override
+  Widget build(BuildContext context) {
+    final SupplierPrice? previous = supplier.previousPrice;
+    final double? ratio = supplier.priceChangeRatio;
+    if (previous == null || ratio == null) {
+      return const Text(
+        '—',
+        style: AppTypography.numeric,
+        textAlign: TextAlign.right,
+      );
+    }
+
+    // Une hausse du prix d'achat est une mauvaise nouvelle : rouge.
+    final bool up = ratio > 0;
+    final Color color = up ? AppColors.danger : AppColors.success;
+
+    return Tooltip(
+      message: 'Tarif précédent : ${Formatters.money(previous.unitPrice)}',
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: <Widget>[
+          Icon(
+            up ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+            size: AppSizes.iconSm,
+            color: color,
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Flexible(
+            child: Text(
+              Formatters.percent(ratio.abs() * 100),
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
+              style: AppTypography.numeric.copyWith(color: color),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

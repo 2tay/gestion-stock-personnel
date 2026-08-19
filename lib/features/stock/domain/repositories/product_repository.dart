@@ -1,3 +1,4 @@
+import '../../../../core/constants/app_enums.dart';
 import '../entities/measurement_unit.dart';
 import '../entities/product.dart';
 import '../entities/product_category.dart';
@@ -31,4 +32,17 @@ abstract interface class ProductRepository {
   /// Enregistre une entrée, une sortie ou un ajustement et met à jour le
   /// stock du produit concerné.
   Future<Product> registerMovement(StockMovement movement);
+
+  /// Ajoute un tarif à l'historique d'un fournisseur pour ce produit.
+  ///
+  /// **Ajoute** : le tarif précédent est conservé, jamais remplacé. Un prix
+  /// identique au tarif en vigueur ne crée aucune ligne.
+  Future<Product> recordSupplierPrice({
+    required String productId,
+    required String supplierId,
+    required double unitPrice,
+    DateTime? validFrom,
+    PriceSource source,
+    String? note,
+  });
 }

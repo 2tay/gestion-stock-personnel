@@ -127,19 +127,63 @@ Si on s'est trompé et qu'on ramène 40 à 35, le stock baisse de 5 avec le type
 `ajustement` et la note « Correction de réception ». Une entrée négative
 n'aurait aucun sens dans l'historique du produit.
 
-**Le prix d'achat de référence du produit suit celui de la commande.**
-`Product.unitPrice` est défini comme le dernier prix d'achat et sert au calcul
-de la valeur du stock. Recevoir à un nouveau prix le met donc à jour — ce qui
-fait bouger la valorisation, et c'est voulu. `repricedProductIds` remonte la
-liste des produits concernés pour pouvoir l'annoncer à l'utilisateur.
+**Le coût moyen est recalculé, jamais écrasé.**
+Recevoir 20 kg à 18 quand on en détient 100 à 12 porte le coût moyen à 13, pas
+à 18 : la valeur du stock devient 1 560 MAD, exactement ce qui a été dépensé.
+Le calcul vit dans `Product.averageCostAfter` — il relève du stock, pas des
+achats — et la réception se contente de l'appliquer, en lisant le produit
+*avant* le mouvement.
 
-**Chaque mouvement porte la référence de la commande**, sa date et son
-utilisateur.
+Une correction à la baisse applique la même formule au prix de l'entrée
+d'origine et restitue donc exactement le coût moyen d'avant. C'est
+`StockMovement.unitCost` qui rend cette réversibilité possible.
+
+**Le dernier prix payé est consigné à part.**
+`lastPurchasePrice`, `lastPurchaseDate` et `lastSupplierId` sont
+**informatifs** : ils alimentent la fiche produit et n'entrent dans aucun
+calcul de valeur. Une correction ne les réécrit pas — la livraison a bien eu
+lieu à ce prix-là. `repricedProductIds` remonte les produits dont le prix payé
+a changé, pour pouvoir l'annoncer à l'utilisateur.
+
+**Chaque mouvement porte la référence de la commande**, sa date, son
+utilisateur, le prix payé (`unitCost`) et le fournisseur.
+
+### Le tarif du fournisseur ne bouge pas tout seul
+
+Un prix payé différent du tarif enregistré est **constaté**, jamais appliqué
+d'office. `ReceiveOrder` remonte la liste dans
+`OrderReceptionResult.priceDiscrepancies` et n'écrit rien ; l'interface pose
+la question (`SupplierPriceUpdateDialog`), et `ApplySupplierPrices` écrit ce
+que l'utilisateur a coché.
+
+La raison est simple : **une promotion ponctuelle et une hausse durable
+produisent exactement la même ligne de commande.** Rien dans les données ne
+les distingue, et seul l'utilisateur sait laquelle il vient de vivre.
+Appliquer automatiquement, c'est enregistrer un tarif faux une fois sur deux —
+et c'est ce que faisait l'ancien code, sans rien dire.
+
+D'où un cas d'usage séparé plutôt qu'un paramètre de `ReceiveOrder` :
+recevoir de la marchandise est un **fait**, apprendre un tarif est un
+**jugement**. Les deux ne se décident pas au même moment ni par la même
+personne. L'écriture passe par `recordSupplierPrice` avec
+`PriceSource.reception`, ce qui permettra plus tard de distinguer un tarif
+négocié d'un tarif simplement constaté à la livraison.
+
+Trois conséquences visibles :
+
+- la réception reste enregistrée même si l'utilisateur refuse le tarif ;
+- refuser ne coûte qu'un geste (« Ignorer »), et les lignes sont cochées par
+  défaut parce que le cas courant est bien une hausse réelle ;
+- une fois le tarif accepté, la livraison suivante au même prix ne pose plus
+  la question — le tarif enregistré correspond.
+
+Une correction à la baisse ne constate aucun tarif : ce n'est pas une
+livraison.
 
 ### Prévenir le module Stock
 
-`OrderReceptionResult.touchedProductIds` réunit les produits reçus, corrigés
-et re-tarifés. `OrderController.receive` appelle ensuite :
+`OrderReceptionResult.touchedProductIds` réunit les produits reçus et
+corrigés. `OrderController.receive` appelle ensuite :
 
 ```dart
 stockController.refreshProducts(result.touchedProductIds);
@@ -239,6 +283,7 @@ quantité commandée après coup rendrait les écarts incompréhensibles.
 ```dart
 supplierRepositoryProvider        purchaseOrderRepositoryProvider
 receiveOrderProvider              // réception : Achats → Stock
+applySupplierPricesProvider       // tarifs constatés : Achats → Stock
 buildShoppingListProvider         // liste de courses : Stock + Achats → Achats
 
 shoppingListControllerProvider    // AsyncValue<ShoppingList>

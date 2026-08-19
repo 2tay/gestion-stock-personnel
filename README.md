@@ -169,6 +169,7 @@ reprendre le projet.
 | ~~4~~ | ~~Module Stock~~ — terminé |
 | ~~5~~ | ~~Module Inventaire~~ — terminé |
 | ~~6~~ | ~~Achats : fournisseurs, commandes, réception, liste de courses~~ — terminé |
+| 6c | Prix d’achat : historique fournisseur, coût réel, valorisation CUMP |
 | 7 | Personnel : employés, pointage, heures supplémentaires |
 | 8 | Tableau de bord |
 | 9 | Rapports & graphiques |

@@ -1,3 +1,4 @@
+import '../../../../core/constants/app_enums.dart';
 import '../../domain/entities/measurement_unit.dart';
 import '../../domain/entities/product.dart';
 import '../../domain/entities/product_category.dart';
@@ -98,18 +99,10 @@ class InMemoryProductRepository implements ProductRepository {
       throw StateError('Produit introuvable : ${movement.productId}');
     }
 
-    final StockMovement stored = movement.id.isEmpty
-        ? StockMovement(
-            id: _nextId('m'),
-            productId: movement.productId,
-            date: movement.date,
-            type: movement.type,
-            quantity: movement.quantity,
-            reference: movement.reference,
-            user: movement.user,
-            note: movement.note,
-          )
-        : movement;
+    // `copyWith` plutôt qu'une reconstruction champ par champ : la liste
+    // manuelle oubliait silencieusement tout champ ajouté à l'entité.
+    final StockMovement stored =
+        movement.id.isEmpty ? movement.copyWith(id: _nextId('m')) : movement;
     _movements.add(stored);
 
     final Product product = _products[index];
@@ -117,6 +110,48 @@ class InMemoryProductRepository implements ProductRepository {
     final Product updated = product.copyWith(
       currentStock: updatedStock < 0 ? 0 : updatedStock,
       updatedAt: stored.date,
+    );
+    _products[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<Product> recordSupplierPrice({
+    required String productId,
+    required String supplierId,
+    required double unitPrice,
+    DateTime? validFrom,
+    PriceSource source = PriceSource.saisieManuelle,
+    String? note,
+  }) async {
+    await _wait();
+    final int index = _indexOf(productId);
+    if (index == -1) {
+      throw StateError('Produit introuvable : $productId');
+    }
+
+    final Product product = _products[index];
+    final ProductSupplier? supplier = product.supplierById(supplierId);
+    if (supplier == null) {
+      throw StateError(
+        'Le fournisseur $supplierId n’est pas associé à ${product.name}.',
+      );
+    }
+
+    final Product updated = product.copyWith(
+      suppliers: <ProductSupplier>[
+        for (final ProductSupplier s in product.suppliers)
+          if (s.id == supplierId)
+            s.withPrice(
+              unitPrice,
+              validFrom: validFrom ?? DateTime.now(),
+              source: source,
+              note: note,
+            )
+          else
+            s,
+      ],
+      updatedAt: DateTime.now(),
     );
     _products[index] = updated;
     return updated;

@@ -94,7 +94,7 @@ void main() {
             productName: beurre.name,
             unit: beurre.unit,
             quantityOrdered: beurre.quantityToOrder,
-            unitPrice: beurre.unitPrice,
+            unitPrice: beurre.averageCost,
           ),
         ],
       );
@@ -120,7 +120,7 @@ void main() {
             productName: beurre.name,
             unit: beurre.unit,
             quantityOrdered: beurre.quantityToOrder,
-            unitPrice: beurre.unitPrice,
+            unitPrice: beurre.averageCost,
           ),
         ],
       );

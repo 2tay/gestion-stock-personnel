@@ -8,6 +8,7 @@ import '../../../../shared/shared.dart';
 import '../../../auth/presentation/controllers/session_controller.dart';
 import '../../domain/entities/purchase_order.dart';
 import '../../domain/usecases/receive_order.dart';
+import 'supplier_price_update_dialog.dart';
 import '../controllers/purchasing_providers.dart';
 
 /// Détail d'une commande et saisie de la réception.
@@ -95,8 +96,8 @@ class _OrderDetailPanelState extends ConsumerState<OrderDetailPanel> {
           '• ${Formatters.signedQuantity(_incomingQuantity, 'unités')} '
           'au total\n'
           '• Valeur reçue : ${Formatters.money(_incomingValue)}\n\n'
-          'Le prix d’achat de référence des produits sera aligné sur celui '
-          'de la commande.',
+          'Le coût moyen des produits sera recalculé à partir des prix de '
+          'la commande.',
       confirmLabel: 'Enregistrer',
       icon: Icons.local_shipping_outlined,
     );
@@ -117,9 +118,36 @@ class _OrderDetailPanelState extends ConsumerState<OrderDetailPanel> {
         content: Text(
           'Réception enregistrée : ${result.linesReceived} ligne'
           '${result.linesReceived > 1 ? 's' : ''} entrée'
-          '${result.linesReceived > 1 ? 's' : ''} en stock'
-          '${result.repricedProductIds.isEmpty ? '' : ', '
-              '${result.repricedProductIds.length} prix mis à jour'}.',
+          '${result.linesReceived > 1 ? 's' : ''} en stock.',
+        ),
+      ),
+    );
+
+    // La réception est acquise. Reste une question distincte : ces prix
+    // deviennent-ils les nouveaux tarifs ? On la pose, on ne la tranche pas.
+    if (result.hasPriceDiscrepancies) {
+      await _askAboutPrices(result);
+    }
+  }
+
+  Future<void> _askAboutPrices(OrderReceptionResult result) async {
+    final List<SupplierPriceDiscrepancy> accepted =
+        await SupplierPriceUpdateDialog.show(
+      context,
+      discrepancies: result.priceDiscrepancies,
+    );
+    if (accepted.isEmpty || !mounted) return;
+
+    await ref
+        .read(orderControllerProvider.notifier)
+        .applySupplierPrices(accepted);
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '${accepted.length} tarif${accepted.length > 1 ? 's' : ''} '
+          'mis à jour.',
         ),
       ),
     );

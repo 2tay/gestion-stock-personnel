@@ -32,6 +32,22 @@ enum OrderStatus {
   annulee,
 }
 
+/// D'où vient un tarif fournisseur.
+///
+/// Sert à distinguer un prix négocié d'un prix simplement constaté à la
+/// livraison : les deux sont vrais, mais on ne leur fait pas la même
+/// confiance pour préparer la commande suivante.
+enum PriceSource {
+  /// Saisi par un utilisateur sur la fiche fournisseur.
+  saisieManuelle,
+
+  /// Constaté à la réception d'une commande.
+  reception,
+
+  /// Issu d'un devis ou d'un tarif communiqué par le fournisseur.
+  devis,
+}
+
 /// État de pointage d'un employé.
 enum AttendanceStatus { pointe, enPause, termine, absent }
 

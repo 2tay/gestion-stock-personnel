@@ -131,6 +131,12 @@ void main() {
     await tester.tap(find.text('Enregistrer').last);
     await tester.pumpAndSettle();
 
+    // Les prix de la commande diffèrent des tarifs enregistrés : la
+    // question est posée, pas tranchée. On refuse.
+    expect(find.text('Mettre à jour les tarifs ?'), findsOneWidget);
+    await tester.tap(find.text('Ignorer'));
+    await tester.pumpAndSettle();
+
     // La commande passe à « Reçue » : trois commandes déjà reçues, plus
     // celle-ci, plus le badge du panneau de détail ouvert.
     expect(find.text('Reçue'), findsNWidgets(5));
@@ -148,6 +154,39 @@ void main() {
     expect(find.text('75 kg'), findsWidgets);
     expect(find.text('CMD-005'), findsOneWidget);
     expect(find.text('Entrée'), findsWidgets);
+  });
+
+  testWidgets('accepter le nouveau tarif mène jusqu’au catalogue',
+      (WidgetTester tester) async {
+    await pumpApp(tester);
+    await tester.tap(find.text('CMD-005'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Tout recevoir'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Enregistrer la réception'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Enregistrer').last);
+    await tester.pumpAndSettle();
+
+    // Carotte est payée 3,00 alors qu'AgriPlus est tarifé 4,80.
+    expect(find.textContaining('Tarif enregistré : 4,80 MAD'), findsOneWidget);
+
+    // Cette fois l'utilisateur accepte : la hausse est durable.
+    await tester.tap(find.text('Mettre à jour 2 tarifs'));
+    await tester.pumpAndSettle();
+
+    // Le catalogue a suivi : le tarif d'AgriPlus pour Carotte vaut 3,00, et
+    // le précédent est conservé — d'où la colonne « Évolution ».
+    showPurchasing.value = false;
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Carotte'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Fournisseurs').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('3,00 MAD'), findsOneWidget);
+    expect(find.text('37,5 %'), findsOneWidget);
   });
 
   testWidgets('la section Fournisseurs liste les fournisseurs',

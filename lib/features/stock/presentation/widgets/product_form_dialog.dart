@@ -71,7 +71,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     _minStock = TextEditingController(text: p == null ? '' : _number(p.minStock));
     _maxStock = TextEditingController(text: p == null ? '' : _number(p.maxStock));
     _unitPrice = TextEditingController(
-      text: p == null ? '' : _number(p.unitPrice),
+      text: p == null ? '' : _number(p.averageCost),
     );
     _notes = TextEditingController(text: p?.notes ?? '');
     _categoryId = p?.categoryId;
@@ -139,7 +139,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
           _isEditing ? widget.product!.currentStock : _parse(_currentStock),
       minStock: _parse(_minStock),
       maxStock: _parse(_maxStock),
-      unitPrice: _parse(_unitPrice),
+      averageCost: _parse(_unitPrice),
       notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
       suppliers: widget.product?.suppliers ?? const <ProductSupplier>[],
     );
@@ -303,7 +303,9 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
               Expanded(
                 child: AppTextField.numeric(
                   controller: _unitPrice,
-                  label: 'Prix d’achat unitaire',
+                  // Saisi à la création, puis recalculé à chaque réception :
+                  // ce n'est pas un tarif, c'est ce que vaut le stock détenu.
+                  label: 'Coût unitaire moyen',
                   hint: '0,00',
                   suffixText: 'MAD',
                 ),

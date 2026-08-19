@@ -46,6 +46,9 @@ class InventoryValidationResult {
 ///    quantité que le théorique n'écrit rien.
 /// 3. **Chaque ajustement porte la référence de l'inventaire**, sa date et
 ///    son utilisateur — l'exigence de traçabilité du cahier des charges.
+/// 4. **Un ajustement est valorisé, pas facturé.** Il porte le prix figé à la
+///    création de l'inventaire, parce qu'un écart de comptage n'est pas un
+///    achat : la quantité change, le coût unitaire non.
 class ValidateInventory {
   const ValidateInventory({
     required InventoryRepository inventories,
@@ -84,6 +87,7 @@ class ValidateInventory {
           reference: inventory.reference,
           user: validatedBy,
           note: 'Écart constaté lors de l’inventaire',
+          unitCost: line.unitPrice,
         ),
       );
       adjustedProductIds.add(line.productId);

@@ -90,7 +90,9 @@ class BuildShoppingList {
           status: product.status,
           pendingQuantity: onOrder,
           quantity: need,
-          unitPrice: primary?.unitPrice ?? product.unitPrice,
+          // À défaut de tarif fournisseur, le coût moyen est la moins
+          // mauvaise estimation disponible.
+          unitPrice: primary?.unitPrice ?? product.averageCost,
           supplierId: primary?.id,
           supplierName:
               primary == null ? null : (byId[primary.id]?.name ?? primary.name),

@@ -23,7 +23,7 @@ autres.
                       │                                   │
              ┌────────┴───────────────────────────────────┴────────┐
              │                      Product                        │
-             │   currentStock · minStock · maxStock · unitPrice     │
+             │   currentStock · minStock · maxStock · averageCost   │
              └────────┬────────────────────────────────┬───────────┘
                       │ 1 ─── N                        │ 1 ─── N
                       │ (embarqué dans l'objet)        │ (stocké à part)
@@ -37,7 +37,8 @@ autres.
 | Entité | Fichier | Rôle |
 |---|---|---|
 | `Product` | `domain/entities/product.dart` | Le produit géré en stock — l'entité pivot |
-| `ProductSupplier` | même fichier | Le lien entre un produit et un fournisseur, avec son prix |
+| `ProductSupplier` | même fichier | Le lien entre un produit et un fournisseur, avec son historique de tarifs |
+| `SupplierPrice` | même fichier | Un tarif à une date donnée — immuable |
 | `StockMovement` | `stock_movement.dart` | Une entrée, une sortie ou une correction |
 | `ProductCategory` | `product_category.dart` | Le regroupement (Légumes, Épicerie…) |
 | `MeasurementUnit` | `measurement_unit.dart` | L'unité de mesure (kg, unité, litre…) |
@@ -52,7 +53,10 @@ String id;  String name;  String emoji;  String? barcode;
 String categoryId;  String categoryName;  String unit;
 
 // Niveaux — le cœur du module
-double currentStock;  double minStock;  double maxStock;  double unitPrice;
+double currentStock;  double minStock;  double maxStock;  double averageCost;
+
+// Dernier achat — informatif, jamais utilisé pour valoriser
+double? lastPurchasePrice;  DateTime? lastPurchaseDate;  String? lastSupplierId;
 
 // Contexte
 List<ProductSupplier> suppliers;  String? notes;  DateTime? updatedAt;
@@ -94,6 +98,57 @@ n'existe pas ici : elle appartiendra au module Achats, en phase 6.
 produit doit afficher, plus l'`id` qui permettra de faire le lien le moment
 venu. Modéliser dès maintenant un `Supplier` complet dans le module Stock
 aurait créé une entité que la phase 6 aurait dû défaire.
+
+**3 bis. Le tarif n'est pas un champ, c'est une lecture.**
+`ProductSupplier` ne stocke pas un prix mais une **liste** de `SupplierPrice`,
+du plus récent au plus ancien. `unitPrice` est un getter qui renvoie le
+premier. Changer un prix n'écrase rien : `withPrice()` ajoute une ligne et
+renvoie un nouveau fournisseur.
+
+Le champ unique d'origine perdait l'information à chaque modification : quand
+un fournisseur augmentait, l'ancien tarif disparaissait, et plus rien ne
+permettait de dire de combien. L'historique rend la hausse mesurable
+(`priceChange`, `priceChangeRatio`) et permet de relire une commande passée au
+tarif qui était le sien (`priceOn(date)`).
+
+Trois choix à l'intérieur de cette décision :
+
+- `validFrom` est **nullable**, et `null` signifie « tarif d'origine, date
+  inconnue ». Il est trié comme le plus ancien de tous. Inventer une date
+  aurait produit un historique faux d'apparence crédible.
+- `priceChange` et `priceChangeRatio` renvoient `null` quand il n'y a qu'un
+  seul tarif. Afficher « 0 % » annoncerait une stabilité qui n'a jamais été
+  observée ; la colonne « Évolution » affiche « — ».
+- Un prix identique au tarif en vigueur ne crée aucune ligne. L'historique
+  consigne les changements, pas les confirmations.
+
+`PriceSource` (*saisie manuelle*, *réception*, *devis*) distingue un prix
+négocié d'un prix simplement constaté à la livraison : les deux sont vrais,
+mais on ne leur fait pas la même confiance pour préparer la commande suivante.
+
+**3 ter. Le produit porte un coût moyen, pas un prix.**
+`averageCost` est le coût unitaire moyen pondéré : ce que vaut **une unité de
+ce que l'on détient**, tous approvisionnements confondus. C'est lui, et lui
+seul, qui valorise le stock.
+
+Il remplace l'ancien `unitPrice`, qui portait le *dernier* prix payé et
+revalorisait donc rétroactivement tout le stock déjà en réserve. 100 kg
+achetés à 12 puis 20 kg à 18 affichaient 2 160 MAD au lieu des 1 560 MAD
+réellement dépensés — 600 MAD sortis de nulle part à chaque hausse de tarif.
+
+Le dernier prix payé n'a pas disparu pour autant : il vit dans
+`lastPurchasePrice`, avec sa date et son fournisseur. Ces trois champs sont
+**informatifs** — ils alimentent la fiche produit, jamais un calcul de
+valeur. Ils sont nullables, et `null` signifie « jamais acheté », pas
+« gratuit » : la fiche affiche « — ».
+
+Trois prix coexistent donc désormais, et il ne faut pas les confondre :
+
+| Question | Où lire |
+|---|---|
+| Que vaut mon stock ? | `Product.averageCost` |
+| Combien ce fournisseur facture-t-il aujourd'hui ? | `ProductSupplier.unitPrice` |
+| Combien a-t-on payé la dernière fois ? | `Product.lastPurchasePrice` |
 
 **4. Le fournisseur principal est un drapeau sur le lien, pas un champ du produit.**
 `isPrimary` vit sur `ProductSupplier`, et non `Product.primarySupplierId` :
@@ -169,7 +224,21 @@ silencieusement une donnée partagée.
 obligatoire : un produit sans unité ni catégorie n'a pas de sens et ne doit
 pas pouvoir exister.
 
-**12. Le pictogramme est un emoji, pas une image.**
+**12. Le mouvement porte son propre prix.**
+`StockMovement.unitCost` est figé à l'écriture : une entrée porte le prix
+réellement payé, une sortie le coût de valorisation du moment. Le prix
+appartient donc à la ligne d'historique, pas au produit — et rien ne peut
+l'effacer quand un tarif change. C'est la correction du défaut décrit en
+phase 6c : un champ unique sur le produit, écrasé à chaque réception,
+revalorisait tout le stock déjà détenu au dernier prix connu.
+
+`unitCost` est **nullable**, et `null` veut dire « prix inconnu », pas
+« gratuit ». Les mouvements saisis à la main n'en portent pas encore ; tout
+calcul de valorisation doit alors retomber sur le coût moyen du produit,
+jamais sur zéro. C'est pourquoi `totalCost` renvoie `double?` : une somme
+silencieusement faussée par des zéros serait pire qu'une valeur absente.
+
+**13. Le pictogramme est un emoji, pas une image.**
 `emoji: '🍅'`. Rien à téléverser, rien à télécharger, rien à mettre en cache :
 l'application doit rester utilisable hors connexion, et une URL d'image serait
 un point de rupture pour un gain purement décoratif.
@@ -183,7 +252,6 @@ un point de rupture pour un gain purement décoratif.
 | `Supplier` complet (contact, adresse, conditions) | Module Achats — phase 6 |
 | Lien typé mouvement → commande / inventaire | Phases 5 et 6, en remplaçant `reference` |
 | Lignes d'inventaire et écarts | Module Inventaire — phase 5 |
-| Historique des prix d'achat | Après la V1 |
 | Lots et dates de péremption | Hors périmètre V1 |
 
 Le principe : chaque module possède ses propres entités et n'expose aux autres
@@ -232,7 +300,7 @@ métier dans leurs getters :
 | Fichier | Contenu |
 |---|---|
 | `product.dart` | `Product` et `ProductSupplier` |
-| `stock_movement.dart` | `StockMovement` — quantité **signée** |
+| `stock_movement.dart` | `StockMovement` — quantité **signée**, coût figé |
 | `product_category.dart` | `ProductCategory` |
 | `measurement_unit.dart` | `MeasurementUnit` (kg, un., L…) |
 
@@ -245,7 +313,8 @@ StockStatus get status {
   return StockStatus.ok;
 }
 
-double get stockValue     => currentStock * unitPrice;
+double get stockValue     => currentStock * averageCost;
+double averageCostAfter({required double quantity, required double unitPrice});
 double get quantityToOrder => max(maxStock - currentStock, 0);
 double get fillRatio       => (currentStock / maxStock).clamp(0, 1);
 ```

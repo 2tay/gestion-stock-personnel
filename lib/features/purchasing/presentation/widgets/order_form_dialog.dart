@@ -43,7 +43,7 @@ class _OrderFormDialogState extends ConsumerState<OrderFormDialog> {
     for (final ProductSupplier s in product.suppliers) {
       if (s.id == _supplierId) return s.unitPrice;
     }
-    return product.unitPrice;
+    return product.averageCost;
   }
 
   void _addProduct(Product product) {

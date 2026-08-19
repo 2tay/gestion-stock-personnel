@@ -7,6 +7,7 @@ import '../../domain/entities/purchase_order.dart';
 import '../../domain/entities/shopping_item.dart';
 import '../../domain/entities/supplier.dart';
 import '../../domain/repositories/purchasing_repositories.dart';
+import '../../domain/usecases/apply_supplier_prices.dart';
 import '../../domain/usecases/build_shopping_list.dart';
 import '../../domain/usecases/receive_order.dart';
 
@@ -23,6 +24,13 @@ final Provider<PurchaseOrderRepository> purchaseOrderRepositoryProvider =
 final Provider<ReceiveOrder> receiveOrderProvider = Provider<ReceiveOrder>(
   (Ref ref) => ReceiveOrder(
     orders: ref.watch(purchaseOrderRepositoryProvider),
+    products: ref.watch(productRepositoryProvider),
+  ),
+);
+
+final Provider<ApplySupplierPrices> applySupplierPricesProvider =
+    Provider<ApplySupplierPrices>(
+  (Ref ref) => ApplySupplierPrices(
     products: ref.watch(productRepositoryProvider),
   ),
 );
@@ -164,6 +172,22 @@ class OrderController extends StateNotifier<AsyncValue<List<PurchaseOrder>>> {
         .read(stockControllerProvider.notifier)
         .refreshProducts(result.touchedProductIds);
     return result;
+  }
+
+  /// Applique les tarifs constatés à la réception, une fois l'utilisateur
+  /// d'accord.
+  ///
+  /// Volontairement séparé de [receive] : recevoir de la marchandise est un
+  /// fait, apprendre un tarif est une décision.
+  Future<void> applySupplierPrices(
+    Iterable<SupplierPriceDiscrepancy> discrepancies,
+  ) async {
+    if (discrepancies.isEmpty) return;
+    final List<String> updated =
+        await _ref.read(applySupplierPricesProvider)(discrepancies);
+    await _ref
+        .read(stockControllerProvider.notifier)
+        .refreshProducts(updated);
   }
 
   /// Annule une commande dont rien n'est encore arrivé.

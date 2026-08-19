@@ -37,10 +37,16 @@ abstract final class StockFixtures {
     ProductCategory(id: 'cat-5', name: 'Viandes', emoji: '🥩'),
   ];
 
-  static const ProductSupplier _agriPlus = ProductSupplier(
+  /// AgriPlus sur la tomate : 5,80 puis 6,20, exactement les prix portés par
+  /// les mouvements d'entrée. C'est le cas que le champ unique traitait faux.
+  static final ProductSupplier _agriPlus = ProductSupplier(
     id: 'sup-1',
     name: 'AgriPlus',
-    unitPrice: 6,
+    unitPrice: 6.20,
+    since: _daysAgo(6),
+    history: <SupplierPrice>[
+      SupplierPrice(unitPrice: 5.80, validFrom: _daysAgo(40)),
+    ],
     reference: 'AP-TOM-01',
     isPrimary: true,
   );
@@ -57,15 +63,24 @@ abstract final class StockFixtures {
           currentStock: 95,
           minStock: 40,
           maxStock: 120,
-          unitPrice: 6,
+          // Entre 5,80 et 6,20 : le coût moyen n'est jamais le dernier
+          // prix payé, c'est tout l'objet de la phase 6c.
+          averageCost: 5.93,
+          lastPurchasePrice: 6.20,
+          lastPurchaseDate: _daysAgo(0, hour: 8, minute: 15),
+          lastSupplierId: 'sup-1',
           notes: 'Conserver au frais, à l’abri de la lumière.',
           updatedAt: _daysAgo(0, hour: 8, minute: 15),
-          suppliers: const <ProductSupplier>[
+          suppliers: <ProductSupplier>[
             _agriPlus,
             ProductSupplier(
               id: 'sup-2',
               name: 'FreshFood',
               unitPrice: 6.4,
+              since: _daysAgo(20),
+              history: <SupplierPrice>[
+                SupplierPrice(unitPrice: 6.1, validFrom: _daysAgo(75)),
+              ],
               reference: 'FF-105',
               deliveryDays: 2,
             ),
@@ -82,9 +97,9 @@ abstract final class StockFixtures {
           currentStock: 50,
           minStock: 25,
           maxStock: 90,
-          unitPrice: 4.5,
+          averageCost: 4.5,
           updatedAt: _daysAgo(1),
-          suppliers: const <ProductSupplier>[
+          suppliers: <ProductSupplier>[
             ProductSupplier(
               id: 'sup-1',
               name: 'AgriPlus',
@@ -105,9 +120,9 @@ abstract final class StockFixtures {
           currentStock: 82,
           minStock: 50,
           maxStock: 150,
-          unitPrice: 5.2,
+          averageCost: 5.2,
           updatedAt: _daysAgo(2),
-          suppliers: const <ProductSupplier>[
+          suppliers: <ProductSupplier>[
             ProductSupplier(
               id: 'sup-1',
               name: 'AgriPlus',
@@ -127,9 +142,12 @@ abstract final class StockFixtures {
           currentStock: 55,
           minStock: 60,
           maxStock: 140,
-          unitPrice: 4.8,
+          averageCost: 4.8,
+          lastPurchasePrice: 4.8,
+          lastPurchaseDate: _daysAgo(4, hour: 8, minute: 45),
+          lastSupplierId: 'sup-1',
           updatedAt: _daysAgo(0, hour: 11, minute: 40),
-          suppliers: const <ProductSupplier>[
+          suppliers: <ProductSupplier>[
             ProductSupplier(
               id: 'sup-1',
               name: 'AgriPlus',
@@ -155,7 +173,7 @@ abstract final class StockFixtures {
           currentStock: 30,
           minStock: 20,
           maxStock: 70,
-          unitPrice: 5.5,
+          averageCost: 5.5,
           updatedAt: _daysAgo(3),
         ),
         Product(
@@ -169,9 +187,9 @@ abstract final class StockFixtures {
           currentStock: 25,
           minStock: 10,
           maxStock: 60,
-          unitPrice: 96,
+          averageCost: 96,
           updatedAt: _daysAgo(4),
-          suppliers: const <ProductSupplier>[
+          suppliers: <ProductSupplier>[
             ProductSupplier(
               id: 'sup-3',
               name: 'DistriFood',
@@ -193,13 +211,22 @@ abstract final class StockFixtures {
           currentStock: 38,
           minStock: 40,
           maxStock: 100,
-          unitPrice: 118,
+          averageCost: 114.5,
+          lastPurchasePrice: 118,
+          lastPurchaseDate: _daysAgo(12),
+          lastSupplierId: 'sup-3',
           updatedAt: _daysAgo(5),
-          suppliers: const <ProductSupplier>[
+          suppliers: <ProductSupplier>[
             ProductSupplier(
               id: 'sup-3',
               name: 'DistriFood',
               unitPrice: 118,
+              since: _daysAgo(12),
+              source: PriceSource.reception,
+              history: <SupplierPrice>[
+                SupplierPrice(unitPrice: 112, validFrom: _daysAgo(60)),
+                SupplierPrice(unitPrice: 108, validFrom: _daysAgo(150)),
+              ],
               isPrimary: true,
               deliveryDays: 2,
             ),
@@ -216,7 +243,7 @@ abstract final class StockFixtures {
           currentStock: 12,
           minStock: 8,
           maxStock: 40,
-          unitPrice: 210,
+          averageCost: 210,
           updatedAt: _daysAgo(6),
         ),
         Product(
@@ -230,9 +257,9 @@ abstract final class StockFixtures {
           currentStock: 32,
           minStock: 24,
           maxStock: 90,
-          unitPrice: 7.5,
+          averageCost: 7.5,
           updatedAt: _daysAgo(0, hour: 7, minute: 30),
-          suppliers: const <ProductSupplier>[
+          suppliers: <ProductSupplier>[
             ProductSupplier(
               id: 'sup-2',
               name: 'FreshFood',
@@ -252,9 +279,9 @@ abstract final class StockFixtures {
           currentStock: 0,
           minStock: 6,
           maxStock: 30,
-          unitPrice: 42,
+          averageCost: 42,
           updatedAt: _daysAgo(1, hour: 16),
-          suppliers: const <ProductSupplier>[
+          suppliers: <ProductSupplier>[
             ProductSupplier(
               id: 'sup-2',
               name: 'FreshFood',
@@ -274,7 +301,7 @@ abstract final class StockFixtures {
           currentStock: 18,
           minStock: 10,
           maxStock: 40,
-          unitPrice: 68,
+          averageCost: 68,
           updatedAt: _daysAgo(2, hour: 14),
         ),
         Product(
@@ -288,7 +315,7 @@ abstract final class StockFixtures {
           currentStock: 240,
           minStock: 96,
           maxStock: 480,
-          unitPrice: 4,
+          averageCost: 4,
           updatedAt: _daysAgo(3, hour: 10),
         ),
         Product(
@@ -302,7 +329,7 @@ abstract final class StockFixtures {
           currentStock: 84,
           minStock: 120,
           maxStock: 360,
-          unitPrice: 5.5,
+          averageCost: 5.5,
           updatedAt: _daysAgo(1, hour: 12),
         ),
         Product(
@@ -316,9 +343,9 @@ abstract final class StockFixtures {
           currentStock: 46,
           minStock: 30,
           maxStock: 100,
-          unitPrice: 38,
+          averageCost: 38,
           updatedAt: _daysAgo(0, hour: 9, minute: 20),
-          suppliers: const <ProductSupplier>[
+          suppliers: <ProductSupplier>[
             ProductSupplier(
               id: 'sup-4',
               name: 'Boucherie Atlas',
@@ -338,19 +365,30 @@ abstract final class StockFixtures {
           currentStock: 14,
           minStock: 20,
           maxStock: 60,
-          unitPrice: 92,
+          averageCost: 92,
           updatedAt: _daysAgo(0, hour: 10),
-          suppliers: const <ProductSupplier>[
+          suppliers: <ProductSupplier>[
             ProductSupplier(
               id: 'sup-4',
               name: 'Boucherie Atlas',
               unitPrice: 92,
+              since: _daysAgo(9),
+              source: PriceSource.devis,
+              history: <SupplierPrice>[
+                SupplierPrice(unitPrice: 88, validFrom: _daysAgo(95)),
+              ],
               isPrimary: true,
             ),
           ],
         ),
       ];
 
+  /// Historique de mouvements, chacun portant le coût qui s'appliquait ce
+  /// jour-là.
+  ///
+  /// La tomate est volontairement achetée à deux prix différents — 5,80 puis
+  /// 6,20 — pour que la valorisation ait quelque chose à calculer : c'est le
+  /// cas que le champ unique `Product.unitPrice` traitait faux.
   static List<StockMovement> movements() => <StockMovement>[
         // Tomate — l'historique visible dans la maquette.
         StockMovement(
@@ -361,6 +399,8 @@ abstract final class StockFixtures {
           quantity: 50,
           reference: 'CMD-005',
           user: 'Admin',
+          unitCost: 6.20,
+          supplierId: 'sup-1',
         ),
         StockMovement(
           id: 'm-002',
@@ -370,6 +410,7 @@ abstract final class StockFixtures {
           quantity: -20,
           reference: 'Vente',
           user: 'Ahmed',
+          unitCost: 5.80,
         ),
         StockMovement(
           id: 'm-003',
@@ -379,6 +420,8 @@ abstract final class StockFixtures {
           quantity: 70,
           reference: 'CMD-004',
           user: 'Admin',
+          unitCost: 5.80,
+          supplierId: 'sup-1',
         ),
         StockMovement(
           id: 'm-004',
@@ -388,6 +431,7 @@ abstract final class StockFixtures {
           quantity: -15,
           reference: 'Vente',
           user: 'Ahmed',
+          unitCost: 5.50,
         ),
         StockMovement(
           id: 'm-005',
@@ -398,6 +442,7 @@ abstract final class StockFixtures {
           reference: 'INV-2024-005',
           user: 'Fatima',
           note: 'Écart constaté lors de l’inventaire',
+          unitCost: 5.50,
         ),
         // Autres produits.
         StockMovement(
@@ -408,6 +453,7 @@ abstract final class StockFixtures {
           quantity: -12,
           reference: 'Vente',
           user: 'Ahmed',
+          unitCost: 4.80,
         ),
         StockMovement(
           id: 'm-011',
@@ -417,6 +463,8 @@ abstract final class StockFixtures {
           quantity: 40,
           reference: 'CMD-003',
           user: 'Admin',
+          unitCost: 4.80,
+          supplierId: 'sup-1',
         ),
         StockMovement(
           id: 'm-012',
@@ -426,6 +474,7 @@ abstract final class StockFixtures {
           quantity: -6,
           reference: 'Vente',
           user: 'Youssef',
+          unitCost: 118,
         ),
         StockMovement(
           id: 'm-013',
@@ -435,6 +484,7 @@ abstract final class StockFixtures {
           quantity: -6,
           reference: 'Vente',
           user: 'Ahmed',
+          unitCost: 42,
         ),
         StockMovement(
           id: 'm-014',
@@ -444,6 +494,7 @@ abstract final class StockFixtures {
           quantity: -36,
           reference: 'Vente',
           user: 'Samira',
+          unitCost: 5.50,
         ),
         StockMovement(
           id: 'm-015',
@@ -453,6 +504,7 @@ abstract final class StockFixtures {
           quantity: -8,
           reference: 'Vente',
           user: 'Ahmed',
+          unitCost: 92,
         ),
       ];
 }

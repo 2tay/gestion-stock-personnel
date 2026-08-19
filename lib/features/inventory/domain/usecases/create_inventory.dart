@@ -52,7 +52,9 @@ class CreateInventory {
             barcode: p.barcode,
             // La photo : ces deux valeurs ne bougeront plus.
             theoreticalStock: p.currentStock,
-            unitPrice: p.unitPrice,
+            // Le coût moyen, et non un prix d'achat : un écart de
+            // comptage se valorise à ce que vaut le stock détenu.
+            unitPrice: p.averageCost,
           ),
         )
         .toList()
